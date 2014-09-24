@@ -1,12 +1,12 @@
-Name:     %{name}
-Version:	%{version}
-Release:	%{release}
+Name:     yum-plugin-s3-iam
+Version:	1.0
+Release:	1
 Summary:	Yum package manager plugin for private S3 repositories.
 
 Group:    Application/SystemTools
 License:  Apache License Version 2.0, January 2004
 URL:		  https://github.com/seporaitis/yum-s3-iam
-Source0:	%{name}-%{version}.tar.gz
+Source0:	https://github.com/seporaitis/yum-s3-iam/archive/master.tar.gz
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildArch: noarch
@@ -18,7 +18,7 @@ Yum package manager plugin for private S3 repositories.
 Uses Amazon IAM & EC2 Roles.
 
 %prep
-%setup -q
+%setup -q -n yum-plugin-s3-iam-master
 
 %build
 
@@ -34,7 +34,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %doc s3iam.repo
 %doc LICENSE NOTICE README.md
 /etc/yum/pluginconf.d/s3iam.conf
-/usr/lib/yum-plugins/s3iam.py
+/usr/lib/yum-plugins/s3iam.py*
 
 %changelog
 * Fri May 31 2013 Matt Jamison <matt@mattjamison.com> 1.0-1

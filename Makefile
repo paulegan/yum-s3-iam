@@ -1,19 +1,31 @@
-NAME				= yum-plugin-s3-iam
-VERSION			= 1.0
-RELEASE			= 1
-ARCH				= noarch
+PROJECT_NAME ?= yum-plugin-s3-iam
+SPEC ?= $(PROJECT_NAME).spec
+SOURCES := ./s3iam.* ./LICENSE ./README.md ./NOTICE ./Makefile
 
-RPM_TOPDIR ?= $(shell rpm --eval '%{_topdir}')
+RPMDIR ?= $(CURDIR)/dist
+BUILDDIR ?= $(CURDIR)/build
+DEFINES = \
+	--define '_topdir $(CURDIR)' \
+	--define '_rpmtopdir $(CURDIR)' \
+	--define '_specdir $(CURDIR)' \
+	--define '_rpmdir $(RPMDIR)' \
+	--define '_srcrpmdir $(RPMDIR)' \
+	--define '_sourcedir $(RPMDIR)' \
+	--define '_builddir $(CURDIR)' \
+	--define '_buildrootdir $(BUILDDIR)'
 
-RPMBUILD_ARGS := \
-	--define "name $(NAME)" \
-	--define "version $(VERSION)" \
-	--define "release $(RELEASE)"
+RPM_BUILDNAME := $(shell rpm --eval '%{_build_name_fmt}')
+RPM ?= $(RPMDIR)/$(shell rpm --specfile $(SPEC) -q --qf '$(RPM_BUILDNAME)\n' $(DEFINES))
 
-.PHONY: all rpm install
+SOURCE0_URL ?= $(word 2, $(shell spectool -l -s 0 $(DEFINES) $(SPEC)))
+SOURCE0 ?= $(RPMDIR)/$(shell basename $(SOURCE0_URL))
 
-all:
-	@echo "Usage: make rpm"
+.PHONY: rpm test install clean
+
+rpm: $(RPM)
+
+test: $(RPM)
+	@python tests.py
 
 install:
 	install -m 0755 -d $(DESTDIR)/etc/yum/pluginconf.d/
@@ -21,15 +33,17 @@ install:
 	install -m 0755 -d $(DESTDIR)/usr/lib/yum-plugins/
 	install -m 0644 s3iam.py $(DESTDIR)/usr/lib/yum-plugins/
 
-rpm:
-	mkdir -p $(RPM_TOPDIR)/SOURCES
-	mkdir -p $(RPM_TOPDIR)/SPECS
-	mkdir -p $(RPM_TOPDIR)/BUILD
-	mkdir -p $(RPM_TOPDIR)/RPMS/$(ARCH)
-	mkdir -p $(RPM_TOPDIR)/SRPMS
-	rm -Rf $(RPM_TOPDIR)/SOURCES/$(NAME)-$(VERSION)
-	cp -r . $(RPM_TOPDIR)/SOURCES/$(NAME)-$(VERSION)
-	tar czf $(RPM_TOPDIR)/SOURCES/$(NAME)-$(VERSION).tar.gz -C $(RPM_TOPDIR)/SOURCES --exclude ".git" $(NAME)-$(VERSION)
-	rm -Rf $(RPM_TOPDIR)/SOURCES/$(NAME)-$(VERSION)
-	cp $(NAME).spec $(RPM_TOPDIR)/SPECS/
-	rpmbuild $(RPMBUILD_ARGS) -ba --clean $(NAME).spec
+install-rpm: $(RPM)
+	sudo yum localinstall $<
+
+clean:
+	$(RM) -r $(SOURCE0) $(RPM) $(RPMDIR) $(BUILDDIR)
+
+$(RPM): $(SPEC) $(SOURCE0)
+	rpmbuild $(DEFINES) --clean -bb $<
+
+$(SOURCE0): $(RPMDIR)
+	tar -c --transform 's,^\.,$(PROJECT_NAME)-master,' -f $@ $(SOURCES)
+
+$(RPMDIR):
+	@mkdir $@
